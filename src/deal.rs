@@ -81,6 +81,9 @@ pub struct DealListQuery {
     /// 4–128 characters.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub full_text_search: Option<String>,
+    /// At most one metadata key (`metadata[key]=value`, deepObject).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub metadata: Option<(String, String)>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub limit: Option<u32>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -116,7 +119,9 @@ impl Client {
 
     /// List deals (`GET /deals`).
     pub async fn list_deals(&self, query: &DealListQuery) -> Result<DealList> {
-        let value = self.get("deals", &crate::client::to_query(query)?).await?;
+        let mut pairs = crate::client::to_query(query)?;
+        crate::client::push_metadata(&mut pairs, &query.metadata);
+        let value = self.get("deals", &pairs).await?;
         Ok(serde_json::from_value(value)?)
     }
 }

@@ -1,4 +1,4 @@
-﻿//! HTTP client: auth, idempotence keys, 202 retries, YM-User-Agent.
+//! HTTP client: auth, idempotence keys, 202 retries, YM-User-Agent.
 
 use crate::error::{ApiError, ApiErrorBody, Error, Result};
 use base64::Engine;
@@ -215,6 +215,16 @@ impl Client {
             env!("CARGO_PKG_VERSION"),
             std::env::consts::OS
         )
+    }
+}
+
+/// Push `metadata[key]=value` (deepObject filter) when set.
+pub(crate) fn push_metadata(
+    pairs: &mut Vec<(String, String)>,
+    metadata: &Option<(String, String)>,
+) {
+    if let Some((k, v)) = metadata {
+        pairs.push((format!("metadata[{k}]"), v.clone()));
     }
 }
 

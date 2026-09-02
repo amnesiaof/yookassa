@@ -3,7 +3,7 @@
 //!
 //! No real HTTP server here — plug `handle()` into axum/actix/hyper/whatever.
 
-use yookassa::{WebhookNotification, is_ip_trusted};
+use yookassa::{NotificationObject, WebhookNotification, is_ip_trusted};
 
 fn handle_notification(body: &str, remote_ip: &str) -> Result<(), yookassa::Error> {
     // 1. Only trust requests actually sent from YooKassa.
@@ -13,19 +13,24 @@ fn handle_notification(body: &str, remote_ip: &str) -> Result<(), yookassa::Erro
 
     // 2. Parse the JSON body.
     let notification = WebhookNotification::parse(body)?;
-    println!(
-        "event {} for payment {}",
-        notification.event, notification.object.id
-    );
+    println!("event {} received", notification.event);
 
     // 3. React.
-    if notification.object.is_succeeded() {
-        println!(
-            "payment {} succeeded — deliver the goods",
-            notification.object.id
-        );
-    } else if notification.object.is_canceled() {
-        println!("payment {} was canceled", notification.object.id);
+    match notification.object {
+        NotificationObject::Payment(p) => {
+            if p.is_succeeded() {
+                println!("payment {} succeeded — deliver the goods", p.id);
+            } else if p.is_canceled() {
+                println!("payment {} was canceled", p.id);
+            }
+        }
+        NotificationObject::Refund(r) => {
+            println!("refund {} for payment {}", r.id, r.payment_id);
+        }
+        NotificationObject::SavedPaymentMethod(pm) => {
+            println!("saved payment method {} is {}", pm.id, pm.status);
+        }
+        _ => {}
     }
     Ok(())
 }

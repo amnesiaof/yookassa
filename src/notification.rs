@@ -6,18 +6,34 @@
 
 use crate::error::Error;
 use crate::payment::Payment;
+use crate::payment_method::SavedPaymentMethod;
+use crate::refund::Refund;
 use serde::Deserialize;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 
-/// A notification about a payment event.
+/// The object carried by a notification, dispatched by its `event`.
+#[derive(Debug, Clone)]
+#[allow(clippy::large_enum_variant)]
+#[non_exhaustive]
+pub enum NotificationObject {
+    /// `payment.*` events.
+    Payment(Payment),
+    /// `refund.succeeded`.
+    Refund(Refund),
+    /// `payment_method.active`.
+    SavedPaymentMethod(SavedPaymentMethod),
+}
+
+/// A notification about an API event.
 #[derive(Debug, Clone)]
 pub struct WebhookNotification {
     /// Always `notification`.
     pub notification_type: String,
-    /// `payment.waiting_for_capture`, `payment.succeeded`, `payment.canceled`.
+    /// `payment.waiting_for_capture`, `payment.succeeded`, `payment.canceled`,
+    /// `refund.succeeded` or `payment_method.active`.
     pub event: String,
-    /// The updated payment object.
-    pub object: Payment,
+    /// The updated object (type depends on the event).
+    pub object: NotificationObject,
 }
 
 impl WebhookNotification {
@@ -45,17 +61,31 @@ impl WebhookNotification {
         let object = raw
             .object
             .ok_or_else(|| Error::InvalidNotification("missing `object` field".into()))?;
-        if !event.starts_with("payment.") {
-            return Err(Error::UnsupportedEvent(event));
-        }
-        let object: Payment = serde_json::from_value(object)
-            .map_err(|e| Error::InvalidNotification(format!("bad payment object: {e}")))?;
+        let object = match event.as_str() {
+            "payment.waiting_for_capture" | "payment.succeeded" | "payment.canceled" => {
+                NotificationObject::Payment(decode(object, "payment")?)
+            }
+            "refund.succeeded" => NotificationObject::Refund(decode(object, "refund")?),
+            "payment_method.active" => {
+                NotificationObject::SavedPaymentMethod(decode(object, "payment_method")?)
+            }
+            _ => return Err(Error::UnsupportedEvent(event)),
+        };
         Ok(Self {
             notification_type: "notification".to_string(),
             event,
             object,
         })
     }
+}
+
+/// Decode a notification object of the given kind.
+fn decode<T: serde::de::DeserializeOwned>(
+    v: serde_json::Value,
+    what: &str,
+) -> crate::error::Result<T> {
+    serde_json::from_value(v)
+        .map_err(|e| Error::InvalidNotification(format!("bad {what} object: {e}")))
 }
 
 /// IPv4/IPv6 networks YooKassa sends notifications from

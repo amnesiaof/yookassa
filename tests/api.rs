@@ -4,7 +4,8 @@
 use std::str::FromStr;
 use yookassa::{
     ApiErrorCode, Auth, Client, Confirmation, CreatePaymentRequest, CurrencyCode, Decimal, Error,
-    MoneyAmount, PaymentListQuery, PaymentMethodData, ProductCode, WebhookNotification,
+    MoneyAmount, NotificationObject, PaymentListQuery, PaymentMethodData, ProductCode,
+    WebhookNotification,
 };
 
 /// Payment sample from `test_payment_facade.py`.
@@ -305,7 +306,9 @@ fn webhook_notification_parses() {
     let notification = WebhookNotification::parse(body).unwrap();
     assert_eq!(notification.notification_type, "notification");
     assert_eq!(notification.event, "payment.waiting_for_capture");
-    assert!(notification.object.is_waiting_for_capture());
+    assert!(
+        matches!(&notification.object, NotificationObject::Payment(p) if p.is_waiting_for_capture())
+    );
 }
 
 #[test]
@@ -316,10 +319,81 @@ fn webhook_notification_validates() {
     assert!(matches!(err, Err(Error::InvalidNotification(_))));
     let err = WebhookNotification::parse(r#"{"type": "notification", "object": {}}"#);
     assert!(matches!(err, Err(Error::InvalidNotification(_))));
+    // Unknown event → UnsupportedEvent.
+    let err = WebhookNotification::parse(
+        r#"{"type": "notification", "event": "deal.closed", "object": {}}"#,
+    );
+    assert!(matches!(err, Err(Error::UnsupportedEvent(_))));
+    // Known event with a malformed object → InvalidNotification.
     let err = WebhookNotification::parse(
         r#"{"type": "notification", "event": "refund.succeeded", "object": {}}"#,
     );
-    assert!(matches!(err, Err(Error::UnsupportedEvent(_))));
+    assert!(matches!(err, Err(Error::InvalidNotification(_))));
+}
+
+#[test]
+fn webhook_notification_refund_dispatch() {
+    let body = r#"{
+        "type": "notification",
+        "event": "refund.succeeded",
+        "object": {
+            "id": "21c23aeb-000f-5000-a000-1cc60f4b35a7",
+            "payment_id": "21c23aeb-000f-5000-9000-15c60f4b35a7",
+            "status": "succeeded",
+            "created_at": "2021-06-21T10:20:55.551Z",
+            "amount": {"value": "42.00", "currency": "RUB"}
+        }
+    }"#;
+    let notification = WebhookNotification::parse(body).unwrap();
+    assert_eq!(notification.event, "refund.succeeded");
+    match notification.object {
+        NotificationObject::Refund(refund) => {
+            assert!(refund.is_succeeded());
+            assert_eq!(refund.payment_id, "21c23aeb-000f-5000-9000-15c60f4b35a7");
+        }
+        other => panic!("expected refund, got {other:?}"),
+    }
+}
+
+#[test]
+fn receipt_item_payment_subject_and_mode() {
+    let item: yookassa::ReceiptItem = serde_json::from_value(serde_json::json!({
+        "description": "Item",
+        "amount": {"value": "1.00", "currency": "RUB"},
+        "quantity": 1,
+        "vat_code": 1,
+        "payment_subject": "commodity",
+        "payment_mode": "full_payment"
+    }))
+    .unwrap();
+    assert_eq!(
+        item.payment_subject,
+        Some(yookassa::PaymentSubject::Commodity)
+    );
+    assert_eq!(item.payment_mode, Some(yookassa::PaymentMode::FullPayment));
+
+    // Round-trip: unknown values fall back instead of failing.
+    let unknown: yookassa::ReceiptItem = serde_json::from_value(serde_json::json!({
+        "description": "Item",
+        "amount": {"value": "1.00", "currency": "RUB"},
+        "quantity": 1,
+        "vat_code": 1,
+        "payment_subject": "future_subject",
+        "payment_mode": "future_mode"
+    }))
+    .unwrap();
+    assert_eq!(
+        unknown.payment_subject,
+        Some(yookassa::PaymentSubject::Other)
+    );
+    assert_eq!(unknown.payment_mode, Some(yookassa::PaymentMode::Other));
+
+    // #[serde(other)] variants do not round-trip: an unknown value read from
+    // the API serializes back as "Other" and must never be sent upstream.
+    assert_eq!(
+        serde_json::to_value(&unknown.payment_subject).unwrap(),
+        serde_json::json!("Other")
+    );
 }
 
 #[test]

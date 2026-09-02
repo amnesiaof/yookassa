@@ -221,9 +221,7 @@ impl PayoutSearchQuery {
         push_dt("created_at.gt", &self.created_at_gt);
         push_dt("created_at.lte", &self.created_at_lte);
         push_dt("created_at.lt", &self.created_at_lt);
-        if let Some((k, v)) = &self.metadata {
-            pairs.push((format!("metadata[{k}]"), v.clone()));
-        }
+        crate::client::push_metadata(&mut pairs, &self.metadata);
         if let Some(limit) = self.limit {
             pairs.push(("limit".to_string(), limit.to_string()));
         }

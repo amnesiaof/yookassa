@@ -55,7 +55,7 @@ pub use invoice::{
     InvoiceDeliveryMethodData, InvoiceLineItem, InvoiceLineItemResponse, InvoicePaymentData,
     InvoicePaymentDetails,
 };
-pub use notification::{WebhookNotification, is_ip_trusted};
+pub use notification::{NotificationObject, WebhookNotification, is_ip_trusted};
 pub use payment::{
     Airline, AirlineLeg, AirlinePassenger, AuthorizationDetails, B2bSberbankPayerBankDetails,
     B2bSberbankVatData, BankCardData, BankCardProduct, CancellationDetails, CapturePaymentRequest,
@@ -64,10 +64,10 @@ pub use payment::{
     ElectronicCertificatePaymentData, IndustryDetails, InvoiceDetails, InvoicingBankCardData,
     MarkCodeInfo, MarkQuantity, Measure, Metadata, OperationalDetails, Payment, PaymentDealInfo,
     PaymentList, PaymentListQuery, PaymentMethod, PaymentMethodData, PaymentMethodDataRequest,
-    PaymentOrder, PaymentOrderBank, PaymentOrderRecipient, PaymentOrderUtilities, PaymentPeriod,
-    PosLinkInfo, ReceiptCustomer, ReceiptData, ReceiptItem, Recipient, RecipientData,
-    SbpPayerBankDetails, Settlement, Statement, StatementDeliveryMethod, Supplier, ThreeDSecure,
-    Transfer, TransferRequest,
+    PaymentMode, PaymentOrder, PaymentOrderBank, PaymentOrderRecipient, PaymentOrderUtilities,
+    PaymentPeriod, PaymentSubject, PosLinkInfo, ReceiptCustomer, ReceiptData, ReceiptItem,
+    Recipient, RecipientData, SbpPayerBankDetails, Settlement, Statement, StatementDeliveryMethod,
+    Supplier, ThreeDSecure, Transfer, TransferRequest,
 };
 pub use payment_method::{
     SavedMethodConfirmation, SavedMethodConfirmationData, SavedMethodData, SavedMethodDataRequest,

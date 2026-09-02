@@ -608,9 +608,9 @@ pub struct ReceiptItem {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub mark_quantity: Option<MarkQuantity>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub payment_subject: Option<String>,
+    pub payment_subject: Option<PaymentSubject>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub payment_mode: Option<String>,
+    pub payment_mode: Option<PaymentMode>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub country_of_origin_code: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -638,6 +638,101 @@ pub struct ReceiptItem {
     /// Only in `POST /receipts` items (54-FZ tag 1260), в‰¤64 chars.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub additional_payment_subject_props: Option<String>,
+}
+
+/// Item of calculation (54-FZ tag 1212). Unknown values from the API
+/// fall back to [`PaymentSubject::Other`].
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum PaymentSubject {
+    #[serde(rename = "commodity")]
+    Commodity,
+    #[serde(rename = "excise")]
+    Excise,
+    #[serde(rename = "job")]
+    Job,
+    #[serde(rename = "service")]
+    Service,
+    #[serde(rename = "gambling_bet")]
+    GamblingBet,
+    #[serde(rename = "gambling_prize")]
+    GamblingPrize,
+    #[serde(rename = "lottery")]
+    Lottery,
+    #[serde(rename = "lottery_prize")]
+    LotteryPrize,
+    #[serde(rename = "intellectual_activity")]
+    IntellectualActivity,
+    #[serde(rename = "payment")]
+    Payment,
+    #[serde(rename = "agent_commission")]
+    AgentCommission,
+    #[serde(rename = "property_right")]
+    PropertyRight,
+    #[serde(rename = "non_operating_gain")]
+    NonOperatingGain,
+    #[serde(rename = "insurance_premium")]
+    InsurancePremium,
+    #[serde(rename = "sales_tax")]
+    SalesTax,
+    #[serde(rename = "resort_fee")]
+    ResortFee,
+    #[serde(rename = "composite")]
+    Composite,
+    #[serde(rename = "another")]
+    Another,
+    #[serde(rename = "fine")]
+    Fine,
+    #[serde(rename = "tax")]
+    Tax,
+    #[serde(rename = "lien")]
+    Lien,
+    #[serde(rename = "cost")]
+    Cost,
+    #[serde(rename = "pension_insurance_without_payouts")]
+    PensionInsuranceWithoutPayouts,
+    #[serde(rename = "pension_insurance_with_payouts")]
+    PensionInsuranceWithPayouts,
+    #[serde(rename = "health_insurance_without_payouts")]
+    HealthInsuranceWithoutPayouts,
+    #[serde(rename = "health_insurance_with_payouts")]
+    HealthInsuranceWithPayouts,
+    #[serde(rename = "health_insurance")]
+    HealthInsurance,
+    #[serde(rename = "casino")]
+    Casino,
+    #[serde(rename = "agent_withdrawals")]
+    AgentWithdrawals,
+    #[serde(rename = "non_marked_excise")]
+    NonMarkedExcise,
+    #[serde(rename = "marked_excise")]
+    MarkedExcise,
+    #[serde(rename = "marked")]
+    Marked,
+    #[serde(rename = "non_marked")]
+    NonMarked,
+    #[serde(other)]
+    Other,
+}
+
+/// Payment method of a receipt item (54-FZ tag 1214).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum PaymentMode {
+    #[serde(rename = "full_prepayment")]
+    FullPrepayment,
+    #[serde(rename = "partial_prepayment")]
+    PartialPrepayment,
+    #[serde(rename = "advance")]
+    Advance,
+    #[serde(rename = "full_payment")]
+    FullPayment,
+    #[serde(rename = "partial_payment")]
+    PartialPayment,
+    #[serde(rename = "credit")]
+    Credit,
+    #[serde(rename = "credit_payment")]
+    CreditPayment,
+    #[serde(other)]
+    Other,
 }
 
 /// Unit of measurement of a receipt item (54-FZ).
